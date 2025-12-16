@@ -6,7 +6,8 @@ const state = {
     isResizing: false,
     activePlayer: null,
     resizeHandle: null,
-    streamCounter: {}
+    streamCounter: {},
+    pendingRemoval: null
 };
 
 // ==================== DOM Elements ====================
@@ -22,6 +23,12 @@ const streamItems = document.getElementById('streamItems');
 const streamCount = document.getElementById('streamCount');
 const toast = document.getElementById('toast');
 const toastMessage = document.getElementById('toastMessage');
+
+// Sidebar confirmation modal elements
+const sidebarConfirmOverlay = document.getElementById('sidebarConfirmOverlay');
+const confirmStreamName = document.getElementById('confirmStreamName');
+const sidebarCancelBtn = document.getElementById('sidebarCancelBtn');
+const sidebarConfirmBtn = document.getElementById('sidebarConfirmBtn');
 
 // ==================== Utility Functions ====================
 function extractChannelName(input) {
@@ -57,6 +64,16 @@ function showToast(message, type = 'success') {
     
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ==================== Focus Management ====================
+function bringToFront(player) {
+    // Remove focused class from all players
+    document.querySelectorAll('.video-player.focused').forEach(p => {
+        p.classList.remove('focused');
+    });
+    // Add focused class to the specified player
+    player.classList.add('focused');
 }
 
 // ==================== Menu Functions ====================
@@ -124,6 +141,30 @@ function removeStream(id) {
     }
 }
 
+// ==================== Sidebar Confirmation ====================
+function showSidebarConfirm(id) {
+    const stream = state.streams.find(s => s.id === id);
+    if (!stream) return;
+    
+    state.pendingRemoval = id;
+    const instanceText = stream.instance > 1 ? ` #${stream.instance}` : '';
+    confirmStreamName.textContent = stream.channel + instanceText;
+    sidebarConfirmOverlay.classList.add('show');
+}
+
+function hideSidebarConfirm() {
+    state.pendingRemoval = null;
+    sidebarConfirmOverlay.classList.remove('show');
+}
+
+function confirmSidebarRemoval() {
+    if (state.pendingRemoval) {
+        removeStream(state.pendingRemoval);
+        hideSidebarConfirm();
+    }
+}
+
+// ==================== Video Player Creation ====================
 function createVideoPlayer(streamData) {
     const player = document.createElement('div');
     player.id = streamData.id;
@@ -141,12 +182,10 @@ function createVideoPlayer(streamData) {
             </iframe>
         </div>
         
-        <div class="drag-overlay"></div>
-        
         <div class="video-controls">
             <!-- Move Button - Left Side -->
             <button class="move-btn" data-action="move" title="Drag to move">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="5 9 2 12 5 15"></polyline>
                     <polyline points="9 5 12 2 15 5"></polyline>
                     <polyline points="15 19 12 22 9 19"></polyline>
@@ -158,7 +197,7 @@ function createVideoPlayer(streamData) {
 
             <!-- Delete Button - Right Side -->
             <button class="delete-btn" data-action="delete" title="Delete">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
@@ -195,8 +234,12 @@ function createVideoPlayer(streamData) {
 
     setupPlayerEvents(player, streamData);
     videoContainer.appendChild(player);
+    
+    // Bring new player to front
+    bringToFront(player);
 }
 
+// ==================== Player Event Setup ====================
 function setupPlayerEvents(player, streamData) {
     const moveBtn = player.querySelector('.move-btn');
     const deleteBtn = player.querySelector('.delete-btn');
@@ -205,11 +248,13 @@ function setupPlayerEvents(player, streamData) {
     const confirmBtn = player.querySelector('[data-action="confirm-delete"]');
     const resizeHandles = player.querySelectorAll('.resize-handle');
     const sizeIndicator = player.querySelector('.size-indicator');
-    const iframe = player.querySelector('iframe');
+
+    // ==================== Click to Focus ====================
+    player.addEventListener('mousedown', (e) => {
+        bringToFront(player);
+    });
 
     // ==================== Drag to Move Functionality ====================
-    let dragOffset = { x: 0, y: 0 };
-
     moveBtn.addEventListener('mousedown', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -218,11 +263,13 @@ function setupPlayerEvents(player, streamData) {
         state.activePlayer = player;
         
         const rect = player.getBoundingClientRect();
-        dragOffset.x = e.clientX - rect.left;
-        dragOffset.y = e.clientY - rect.top;
+        player.dataset.offsetX = e.clientX - rect.left;
+        player.dataset.offsetY = e.clientY - rect.top;
         
         player.classList.add('dragging');
         moveBtn.classList.add('dragging');
+        
+        bringToFront(player);
     });
 
     // ==================== Delete Functionality ====================
@@ -264,6 +311,8 @@ function setupPlayerEvents(player, streamData) {
             player.classList.add('resizing');
             sizeIndicator.classList.add('show');
             sizeIndicator.textContent = `${Math.round(startWidth)} × ${Math.round(startHeight)}`;
+            
+            bringToFront(player);
 
             function onMouseMove(e) {
                 if (!state.isResizing) return;
@@ -341,55 +390,48 @@ function setupPlayerEvents(player, streamData) {
     });
 }
 
-// ==================== Global Mouse Move/Up for Dragging ====================
+// ==================== Global Mouse Move for Dragging ====================
 document.addEventListener('mousemove', (e) => {
     if (state.isDragging && state.activePlayer) {
         const player = state.activePlayer;
-        const newX = e.clientX - parseInt(getComputedStyle(player).width) / 2 + 
-                     (parseInt(getComputedStyle(player).width) / 2 - e.clientX + player.offsetLeft);
-        const newY = e.clientY - parseInt(getComputedStyle(player).height) / 2 +
-                     (parseInt(getComputedStyle(player).height) / 2 - e.clientY + player.offsetTop);
         
-        // Simple calculation based on mouse position
-        const rect = player.getBoundingClientRect();
-        const offsetX = e.clientX - rect.left - rect.width / 2 + rect.width / 2;
-        const offsetY = e.clientY - rect.top - rect.height / 2 + rect.height / 2;
+        const offsetX = parseFloat(player.dataset.offsetX) || 0;
+        const offsetY = parseFloat(player.dataset.offsetY) || 0;
         
-        let finalX = e.clientX - (rect.width * 0.05); // Offset for move button position
-        let finalY = e.clientY - (40 / 2); // Center on the move button
-        
-        // Use stored offset for accurate positioning
-        const streamData = state.streams.find(s => s.id === player.id);
-        if (streamData) {
-            finalX = e.clientX - 32; // Approximate move button center from left
-            finalY = e.clientY - 32; // Approximate move button center from top
-        }
+        let newX = e.clientX - offsetX;
+        let newY = e.clientY - offsetY;
 
         // Boundary checking
         const maxX = window.innerWidth - player.offsetWidth;
         const maxY = window.innerHeight - player.offsetHeight;
         
-        finalX = Math.max(0, Math.min(finalX, maxX));
-        finalY = Math.max(0, Math.min(finalY, maxY));
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
         
-        player.style.left = finalX + 'px';
-        player.style.top = finalY + 'px';
+        player.style.left = newX + 'px';
+        player.style.top = newY + 'px';
         
         // Update state
+        const streamData = state.streams.find(s => s.id === player.id);
         if (streamData) {
-            streamData.x = finalX;
-            streamData.y = finalY;
+            streamData.x = newX;
+            streamData.y = newY;
         }
     }
 });
 
+// ==================== Global Mouse Up for Dragging ====================
 document.addEventListener('mouseup', () => {
     if (state.isDragging && state.activePlayer) {
         const player = state.activePlayer;
         const moveBtn = player.querySelector('.move-btn');
         
         player.classList.remove('dragging');
-        moveBtn.classList.remove('dragging');
+        if (moveBtn) moveBtn.classList.remove('dragging');
+        
+        // Clean up data attributes
+        delete player.dataset.offsetX;
+        delete player.dataset.offsetY;
         
         state.isDragging = false;
         state.activePlayer = null;
@@ -402,13 +444,13 @@ function updateStreamList() {
     streamItems.innerHTML = state.streams.map(stream => {
         const instanceText = stream.instance > 1 ? `#${stream.instance}` : '';
         return `
-            <div class="stream-item">
+            <div class="stream-item" data-id="${stream.id}">
                 <div class="avatar">${stream.channel[0].toUpperCase()}</div>
                 <div class="info">
                     <span class="name">${stream.channel}</span>
                     ${instanceText ? `<span class="instance">Instance ${instanceText}</span>` : ''}
                 </div>
-                <button class="remove-btn" onclick="removeStream('${stream.id}')">
+                <button class="remove-btn" data-stream-id="${stream.id}" title="Remove stream">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -417,6 +459,28 @@ function updateStreamList() {
             </div>
         `;
     }).join('');
+
+    // Add event listeners to remove buttons
+    document.querySelectorAll('.stream-item .remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const streamId = btn.dataset.streamId;
+            showSidebarConfirm(streamId);
+        });
+    });
+
+    // Add click listener to stream items to focus the video
+    document.querySelectorAll('.stream-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            if (!e.target.closest('.remove-btn')) {
+                const streamId = item.dataset.id;
+                const player = document.getElementById(streamId);
+                if (player) {
+                    bringToFront(player);
+                }
+            }
+        });
+    });
 }
 
 function updateEmptyState() {
@@ -424,19 +488,42 @@ function updateEmptyState() {
 }
 
 // ==================== Event Listeners ====================
+
+// Menu toggle
 menuToggle.addEventListener('click', () => toggleMenu());
 menuOverlay.addEventListener('click', () => toggleMenu(false));
 
-// Shift key toggle
+// Sidebar confirmation buttons
+sidebarCancelBtn.addEventListener('click', hideSidebarConfirm);
+sidebarConfirmBtn.addEventListener('click', confirmSidebarRemoval);
+sidebarConfirmOverlay.addEventListener('click', (e) => {
+    if (e.target === sidebarConfirmOverlay) {
+        hideSidebarConfirm();
+    }
+});
+
+// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+    // Shift to toggle menu
     if (e.key === 'Shift' && !e.repeat) {
         toggleMenu();
     }
+    
+    // Escape to close things
     if (e.key === 'Escape') {
+        // Close sidebar confirmation first
+        if (sidebarConfirmOverlay.classList.contains('show')) {
+            hideSidebarConfirm();
+            return;
+        }
+        
+        // Close menu
         if (state.menuOpen) {
             toggleMenu(false);
+            return;
         }
-        // Also close any open delete confirmations
+        
+        // Close any open delete confirmations on videos
         document.querySelectorAll('.delete-confirm.show').forEach(confirm => {
             confirm.classList.remove('show');
             confirm.closest('.video-player').classList.remove('dragging');
@@ -462,7 +549,7 @@ urlInput.addEventListener('keypress', (e) => {
     }
 });
 
-// Smart paste - auto close menu on paste
+// Smart paste - auto add and close menu on paste in input
 urlInput.addEventListener('paste', (e) => {
     setTimeout(() => {
         const channelName = extractChannelName(urlInput.value);
@@ -475,6 +562,7 @@ urlInput.addEventListener('paste', (e) => {
 
 // Global paste anywhere on page
 document.addEventListener('paste', (e) => {
+    // Don't trigger if typing in input or menu is open
     if (document.activeElement !== urlInput && !state.menuOpen) {
         const text = e.clipboardData.getData('text');
         const channelName = extractChannelName(text);
@@ -482,6 +570,36 @@ document.addEventListener('paste', (e) => {
             addStream(channelName);
         }
     }
+});
+
+// Prevent context menu during drag
+document.addEventListener('contextmenu', (e) => {
+    if (state.isDragging || state.isResizing) {
+        e.preventDefault();
+    }
+});
+
+// Handle window resize - keep videos in bounds
+window.addEventListener('resize', () => {
+    state.streams.forEach(stream => {
+        const player = document.getElementById(stream.id);
+        if (player) {
+            const maxX = window.innerWidth - player.offsetWidth;
+            const maxY = window.innerHeight - player.offsetHeight;
+            
+            let newX = Math.min(stream.x, maxX);
+            let newY = Math.min(stream.y, maxY);
+            
+            newX = Math.max(0, newX);
+            newY = Math.max(0, newY);
+            
+            player.style.left = newX + 'px';
+            player.style.top = newY + 'px';
+            
+            stream.x = newX;
+            stream.y = newY;
+        }
+    });
 });
 
 // ==================== Initialize ====================

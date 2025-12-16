@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitch Multiplayer View</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div id="header-bar">
+        <h1>Twitch Multi-View</h1>
+        <div id="input-area">
+            <input type="text" id="stream-url-input" placeholder="Enter Twitch URL (e.g., twitch.tv/channel_name)">
+            <button id="add-stream-btn">Add Stream</button>
+        </div>
+    </div>
+    
+    <div id="video-canvas">
+        </div>
+
+    <script src="https://player.twitch.tv/js/embed/v1.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

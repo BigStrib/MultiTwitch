@@ -11,7 +11,7 @@ body {
     color: white;
     margin: 0;
     padding: 0;
-    overflow: hidden; 
+    overflow: hidden; /* Prevent scrolling if videos go off-screen */
 }
 
 #header-bar {
@@ -28,7 +28,7 @@ h1 {
     color: var(--twitch-purple);
 }
 
-/* Input/Button Styling (Unchanged) */
+/* --- Input Styling --- */
 #stream-url-input {
     padding: 8px;
     border: 1px solid var(--twitch-purple);
@@ -49,14 +49,14 @@ h1 {
 }
 
 #add-stream-btn:hover {
-    background-color: #772ce8; 
+    background-color: #772ce8;
 }
 
 /* --- Video Canvas and Container Styling --- */
 #video-canvas {
     position: relative;
     width: 100vw;
-    height: calc(100vh - 58px); 
+    height: calc(100vh - 58px); /* Full height minus header bar height */
 }
 
 .video-player-container {
@@ -64,15 +64,13 @@ h1 {
     width: 400px;
     height: 225px; /* Default 16:9 aspect ratio */
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.7);
-    /* BORDER REMOVED */
     z-index: 10;
     resize: none; /* Disable browser resize */
     overflow: hidden;
-    top: 50px;
-    left: 50px;
+    /* Initial position set by JS */
 }
 
-/* --- Hover Controls Styling (Unchanged) --- */
+/* --- Hover Controls Styling --- */
 .controls-panel {
     position: absolute;
     top: 0;
@@ -84,13 +82,13 @@ h1 {
     justify-content: space-between;
     align-items: center;
     padding: 0 5px;
-    opacity: 0;
+    opacity: 0; 
     transition: opacity 0.2s;
-    z-index: 20;
+    z-index: 20; 
 }
 
 .video-player-container:hover .controls-panel {
-    opacity: 1;
+    opacity: 1; 
 }
 
 .control-btn {
@@ -113,6 +111,11 @@ h1 {
     background-color: var(--twitch-purple);
 }
 
+.move-btn.dragging {
+    cursor: grabbing;
+    background-color: #772ce8;
+}
+
 .close-btn:hover {
     background-color: red;
 }
@@ -125,8 +128,8 @@ h1 {
     background-color: var(--twitch-purple);
     border: 1px solid white;
     box-sizing: border-box;
-    z-index: 30; /* Above controls panel */
-    opacity: 0; /* Hidden by default */
+    z-index: 30; 
+    opacity: 0; 
     transition: opacity 0.2s;
 }
 
@@ -160,22 +163,20 @@ h1 {
     cursor: nwse-resize;
 }
 
-/* --- Additions to style.css --- */
-
-/* Style for the confirmation overlay */
+/* --- Confirmation Overlay Styling --- */
 .confirmation-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.9); /* Dark semi-transparent background */
+    background-color: rgba(0, 0, 0, 0.9); 
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
-    z-index: 100; /* Must be higher than the controls panel (z-index: 20) */
+    z-index: 100; 
     color: white;
 }
 
@@ -194,9 +195,8 @@ h1 {
     transition: opacity 0.2s;
 }
 
-/* Style for the "Yes, Remove" button (Destructive action) */
 .confirmation-buttons .confirm-remove-btn {
-    background-color: #e83e8c; /* Twitch/Streamlabs pink/red for danger */
+    background-color: #e83e8c; 
     color: white;
 }
 
@@ -204,7 +204,6 @@ h1 {
     opacity: 0.8;
 }
 
-/* Style for the "Cancel" button (Neutral action) */
 .confirmation-buttons .cancel-remove-btn {
     background-color: #555;
     color: white;
@@ -214,7 +213,6 @@ h1 {
     opacity: 0.8;
 }
 
-/* Icon styling */
 .confirmation-icon {
     font-size: 3em;
     color: var(--twitch-purple);

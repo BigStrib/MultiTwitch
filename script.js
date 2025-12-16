@@ -77,8 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
             channel: channelName,
             width: '100%',
             height: '100%',
-            // IMPORTANT: Replace this with your actual domain(s) for security
-            parent: ["localhost", "127.0.0.1", window.location.hostname] 
+            // !!! CONFIGURED FOR YOUR GITHUB PAGES DOMAIN !!!
+            parent: ["bigstrib.github.io"] 
         });
     }
 
@@ -90,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const overlay = document.createElement('div');
         overlay.className = 'confirmation-overlay';
 
-        // Use template literals to construct the overlay HTML
         overlay.innerHTML = `
             <div class="confirmation-icon">
                 <i class="fas fa-trash-alt"></i>
@@ -110,14 +109,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add event listeners to the new buttons
         overlay.querySelector('.confirm-remove-btn').addEventListener('click', () => {
-            container.remove(); // Final removal action
+            container.remove(); 
         });
 
         overlay.querySelector('.cancel-remove-btn').addEventListener('click', () => {
-            overlay.remove(); // Remove the overlay, leaving the stream intact
+            overlay.remove(); 
         });
 
-        // Append the overlay to the video container
         container.appendChild(overlay);
     }
 
@@ -125,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function initiateDrag(element, startEvent) {
         let isDragging = true;
         
-        // Calculate the initial offset
         const offsetX = startEvent.clientX - element.getBoundingClientRect().left;
         const offsetY = startEvent.clientY - element.getBoundingClientRect().top;
         
@@ -135,7 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const onMouseMove = (moveEvent) => {
             if (!isDragging) return;
-            // Update the element's position
             element.style.left = `${moveEvent.clientX - offsetX}px`;
             element.style.top = `${moveEvent.clientY - offsetY}px`;
         };
@@ -156,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function initiateResize(element, startEvent, position) {
         let isResizing = true;
         
-        // Get initial element properties
         const startX = startEvent.clientX;
         const startY = startEvent.clientY;
         const startWidth = element.offsetWidth;
@@ -177,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let newLeft = startLeft;
             let newTop = startTop;
 
-            // Step 1: Calculate new dimensions based on mouse movement
+            // Step 1: Calculate potential new dimensions
             if (position.includes('right')) {
                 newWidth = startWidth + deltaX;
             } else if (position.includes('left')) {
@@ -194,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Step 2: Enforcement and Aspect Ratio Maintenance
 
-            // Determine the controlling dimension based on which handle is dragged
             let controllingDimension;
             if (position.includes('top') || position.includes('bottom')) {
                 controllingDimension = 'height';
@@ -205,28 +199,24 @@ document.addEventListener('DOMContentLoaded', () => {
             // Check for minimum size constraints
             if (newWidth < MIN_SIZE) {
                 newWidth = MIN_SIZE;
-                controllingDimension = 'width'; // Force width control if minimum hit
+                controllingDimension = 'width';
             }
             if (newHeight < MIN_SIZE / ASPECT_RATIO) {
                 newHeight = MIN_SIZE / ASPECT_RATIO;
-                controllingDimension = 'height'; // Force height control if minimum hit
+                controllingDimension = 'height';
             }
             
             // Recalculate based on the controlling dimension to maintain aspect ratio
             if (controllingDimension === 'width') {
-                // Adjust Height to match Width
                 const actualNewHeight = newWidth / ASPECT_RATIO;
                 if (position.includes('top')) {
-                    // Adjust Top position to keep bottom corner fixed
                     newTop = startTop + (startHeight - actualNewHeight);
                 }
                 newHeight = actualNewHeight;
 
             } else { // controllingDimension === 'height'
-                // Adjust Width to match Height
                 const actualNewWidth = newHeight * ASPECT_RATIO;
                 if (position.includes('left')) {
-                    // Adjust Left position to keep right corner fixed
                     newLeft = startLeft + (startWidth - actualNewWidth);
                 }
                 newWidth = actualNewWidth;
@@ -255,7 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = streamInput.value.trim();
         if (!url) return;
 
-        // Simple parsing: Extracts channel name from URL or assumes direct channel name
         let channelName = url.split('/').pop().toLowerCase();
         
         if (channelName.startsWith('http')) {
@@ -264,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         createPlayerContainer(channelName);
-        streamInput.value = ''; // Clear input after adding
+        streamInput.value = ''; 
     });
 
     // Allow pressing Enter in the input field
